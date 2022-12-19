@@ -1,0 +1,10 @@
+^C:\USERS\ENRJ31022\DOCUMENTS\IVC\SRWK_1\CMAKELISTS.TXT
+setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -SC:/Users/EnrJ31022/Documents/IVC/Srwk_1 -BC:/Users/EnrJ31022/Documents/IVC/Srwk_1/build --check-stamp-file C:/Users/EnrJ31022/Documents/IVC/Srwk_1/build/CMakeFiles/generate.stamp
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
