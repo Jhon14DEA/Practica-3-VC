@@ -1,17 +1,18 @@
 #include <iostream>
 #include <stdio.h>
-#include <opencv2/opencv.hpp>
+#include <opencv2/opencv.hpp>//librería para trabajar con imgs
 #include <cstdlib>
 #include <fstream>
 #include <string.h>
-#include <dirent.h>//librería que se  descargo de https://web.archive.org/web/20170428133315/http://www.softagalleria.net/dirent.php y seguir las instrucciones
+#include <dirent.h>//librería que se debe descargar de https://web.archive.org/web/20170428133315/http://www.softagalleria.net/dirent.php y seguir las instrucciones
 #include "opencv2/imgcodecs.hpp"
 #include "opencv2/highgui.hpp"
 #include "opencv2/imgproc.hpp"
 #include <iomanip>
 
-// Espacio de nombres de OpenCV
 using namespace std;
+
+// Espacio de nombres de OpenCV
 using namespace cv;
 
 //funciones
@@ -31,10 +32,11 @@ float compararImagenes();
 void pruebaHu();
 void analizarImagen();//muestra las distintas transformaciones de las imagenes
 void calcularHistograma();
+void calculoLBP();
 
 //variables globales
-const int ntraining=1000;//cantidad de imágenes para el entrenamiento
-const int ntest=700;//cantidad de imágenes para la validación
+const int ntraining=100;//cantidad de imágenes para el entrenamiento
+const int ntest=75;//cantidad de imágenes para la validación
 const int thresh = 1;//porcentaje para buscar bordes
 double training[ntraining][8];//lista de hu e id de figuras de entrenamiento
 double test[ntest][8];//lista de hu e id de figuras para testing
@@ -52,7 +54,8 @@ int main(int argc, char** argv) {
         printf("%s \n", "5: Ver analisis de imagenes");
         printf("%s \n", "6: Ver histograma de imagen");
         printf("%s \n", "7: Comparar imágenes");
-        printf("%s \n", "8: Salir");
+        printf("%s \n", "8: Calculo LBP");
+        printf("%s \n", "9: Salir");
         printf("%s \n", "Ingrese la opcion: ");
         scanf_s("%d", &opc);
         switch (opc){
@@ -82,13 +85,16 @@ int main(int argc, char** argv) {
             compararImagenes();
             break;
         case 8:
+            calculoLBP();
+            break;
+        case 9:
             printf("%s \n", "Fin");
             break;     
         default:
             printf("%s \n","Valor desconocido");
             break;
         }
-    }while(opc != 8);  
+    }while(opc != 9);  
 
 }
 
@@ -108,9 +114,8 @@ void listarArchivos(){
     closedir(direccion);
     std::cout<<"Cantidad archivos encontrados: "<<numero<<"\n";
 
-    // std::cout<<"Elementos de la lista"<<"\n";
-    std::cout<<"Conjunto de imagenes generado"<<"\n";
-    // std::cout <<lista.size() <<endl;
+    std::cout<<"Elementos de la lista"<<"\n";
+    std::cout <<lista.size() <<endl;
 }
 
 int generarNumeros(int ls){
@@ -423,7 +428,34 @@ float compararImagenes(){
         std::cout<<"Son figuras similares"<<"\n";
         return false;
     }
+}
 
-    
-
+void calculoLBP(){
+    String filename1 = dir+lista[generarNumeros((int)lista.size())];
+    Mat im1 =imread(filename1);
+    cvtColor(im1,im1,COLOR_BGR2GRAY);   
+    threshold(im1,im1,thresh,thresh*2,3);
+    Mat lbp=cv::Mat::zeros(im1.rows-2,im1.cols-2, CV_8UC1);
+    for(int i=1;i<im1.rows-1;i++){
+        for(int j=1;j<im1.cols-1;j++){
+            unsigned char center = im1.at<unsigned char>(i,j);
+            unsigned char code = 0;
+            code |= (im1.at<unsigned char>(i-1,j-1) > center) << 7;
+            code |= (im1.at<unsigned char>(i-1,j) > center) << 6;
+            code |= (im1.at<unsigned char>(i-1,j+1) > center) << 5;
+            code |= (im1.at<unsigned char>(i,j+1) > center) << 4;
+            code |= (im1.at<unsigned char>(i+1,j+1) > center) << 3;
+            code |= (im1.at<unsigned char>(i+1,j) > center) << 2;
+            code |= (im1.at<unsigned char>(i+1,j-1) > center) << 1;
+            code |= (im1.at<unsigned char>(i,j-1) > center) << 0;
+            lbp.at<unsigned char>(i-1,j-1) = code;
+        }
+    }
+    for(int i=0;i<lbp.cols;i++){
+        for(int j=0;j<lbp.cols;j++){
+            std::cout<<lbp.at<unsigned char>(i,j)<<" ";
+        }
+        // getchar();
+        std::cout<<"\n";
+    }
 }
