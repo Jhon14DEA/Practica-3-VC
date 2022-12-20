@@ -27,12 +27,13 @@ int idFigura(String);//devuelve un número entero según la entrada de la forma 
 string nombreFigura(int);//devuelve el nombre de la figura según el número ingresado de la forma similar a la función anterior
 
 double calcularDistancia(Mat, Mat);
-float compararImagenes();
+bool compararImagenes();
 
 void pruebaHu();
 void analizarImagen();//muestra las distintas transformaciones de las imagenes
 void calcularHistograma();
 void calculoLBP();
+void compararImagenesyMetricas();
 
 //variables globales
 const int ntraining=100;//cantidad de imágenes para el entrenamiento
@@ -82,7 +83,7 @@ int main(int argc, char** argv) {
             calcularHistograma();
             break;
         case 7:
-            compararImagenes();
+            compararImagenesyMetricas();
             break;
         case 8:
             calculoLBP();
@@ -107,8 +108,10 @@ void listarArchivos(){
         lista.clear();
     if(direccion=opendir(dir.c_str())){
         while(elementos=readdir(direccion)){
-            lista.push_back(elementos->d_name);
-            numero++;
+            if(std::strlen(elementos->d_name) > 10){
+                 lista.push_back(elementos->d_name);
+                numero++;
+            }           
         }
     }
     closedir(direccion);
@@ -326,7 +329,8 @@ void analizarImagen(){
         //graficar bordes
         Mat drawing = Mat::zeros( canny_output.size(), CV_8UC3 );
         Scalar color = Scalar( 255,255,255);
-        drawContours( drawing, contours,1, color, 2 );
+        for( size_t i = 0; i< contours.size(); i++ )
+            drawContours( drawing, contours,1, color, 2 );
         //mostrar gráfica con bordes 
         imshow( "Shape", drawing );
 
@@ -382,12 +386,16 @@ void calcularHistograma(){
 double calcularDistancia(Mat im1, Mat im2){
     return matchShapes(im1, im2, CONTOURS_MATCH_I2, 0); 
 }
-float compararImagenes(){
-    String filename1 = dir+lista[generarNumeros((int)lista.size())];
-    Mat im1 =imread(filename1);
-    String filename2 = dir+lista[generarNumeros((int)lista.size())];
-    Mat im2 =imread(filename2);
-    
+bool compararImagenes(){
+    String filename1 = conjuntoEntrenamiento[generarNumeros((int)conjuntoEntrenamiento.size())];
+    Mat im1 =imread(dir+filename1);
+    String filename2 = conjuntoValidacion[generarNumeros((int)conjuntoValidacion.size())];
+    Mat im2 =imread(dir+filename2);
+
+    if( im1.empty() || im2.empty()){
+        std::cout<<"\n Error al procesar un archivo \n";
+        return false;
+    }    
 
     cvtColor(im1,im1,COLOR_BGR2GRAY);   
     threshold(im1,im1,thresh,thresh*2,3);
@@ -402,8 +410,11 @@ float compararImagenes(){
     findContours( canny_output, contours, RETR_TREE, CHAIN_APPROX_SIMPLE );
     //graficar bordes
     Mat drawing = Mat::zeros( canny_output.size(), CV_8UC3 );
-    Scalar color = Scalar( 255,255,255);
-    drawContours( drawing, contours,1, color, 2 );
+    for( size_t i = 0; i< contours.size(); i++ )
+    {
+        Scalar color = Scalar( rng.uniform(0, 256), rng.uniform(0,256), rng.uniform(0,256) );
+        drawContours( drawing, contours, (int)i, color, 2 );
+    }
 
     //detección de bordes        
     Mat canny_output_;
@@ -412,8 +423,11 @@ float compararImagenes(){
     findContours( canny_output_, contours_, RETR_TREE, CHAIN_APPROX_SIMPLE );
     //graficar bordes
     Mat drawing_ = Mat::zeros( canny_output_.size(), CV_8UC3 );
-    
-    drawContours( drawing_, contours_,1, color, 2 );
+    for( size_t i = 0; i< contours_.size(); i++ )
+    {
+        Scalar color = Scalar( rng.uniform(0, 256), rng.uniform(0,256), rng.uniform(0,256) );
+        drawContours( drawing_, contours_, (int)i, color, 2 );
+    }
 
     imshow( "Im1", drawing );
     imshow( "Im2", drawing_);
@@ -421,13 +435,19 @@ float compararImagenes(){
 
     double d = calcularDistancia(im1,im2);
     std::cout<<"Distancia : "<<d<<"\n";
+    float comparaDistancia, comparaValid;
     if(d>0.09){
         std::cout<<"Son figuras distintas"<<"\n";
-        return true;
+        comparaDistancia = false;
     }else{
         std::cout<<"Son figuras similares"<<"\n";
-        return false;
+        comparaDistancia = true;
     }
+    if(idFigura(filename1) == idFigura(filename2))
+        comparaValid=true;
+    else
+        comparaValid=false;
+    return (comparaDistancia == comparaValid);
 }
 
 void calculoLBP(){
@@ -455,7 +475,23 @@ void calculoLBP(){
         for(int j=0;j<lbp.cols;j++){
             std::cout<<lbp.at<unsigned char>(i,j)<<" ";
         }
-        // getchar();
+        getchar();
         std::cout<<"\n";
     }
+}
+
+void compararImagenesyMetricas(){
+    float correctos=0,incorrectos=0, n=10;
+            for(int i=0;i<n;i++){
+                if(compararImagenes())  
+                    correctos++;
+                else
+                    incorrectos++;    
+            }
+            float pcorrectos =(float) (correctos/n)*100;
+            float pincorrectos=(float)(incorrectos/n)*100;
+            std::cout<<"\n Resultados \n"<<"Comparaciones realizadas: "<<n<<"\n";
+            std::cout<<"Porcentaje Correctos: "<<pcorrectos<<"%\n";
+            std::cout<<"Porcentaje Incorrectos: "<<pincorrectos<<"%\n";
+            std::cout<<"Presione una tecla para continuar\n";
 }
